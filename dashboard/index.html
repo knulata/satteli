@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satteli Dashboard - Satellite Monitoring Platform</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" href="../logo.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sat: {
+                            dark: '#0c1425',
+                            navy: '#1e293b',
+                            blue: '#0ea5e9',
+                            cyan: '#22d3ee',
+                            green: '#10b981',
+                            orange: '#f59e0b',
+                            red: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+
+        .sidebar {
+            transition: transform 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+            }
+        }
+
+        .alert-pulse {
+            animation: alertPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .leaflet-container {
+            background: #0c1425;
+        }
+
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #1e293b;
+            color: white;
+            border-radius: 12px;
+        }
+
+        .custom-popup .leaflet-popup-tip {
+            background: #1e293b;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-new { background: #fef2f2; color: #dc2626; }
+        .status-acknowledged { background: #fef9c3; color: #ca8a04; }
+        .status-resolved { background: #dcfce7; color: #16a34a; }
+
+        .severity-critical { border-left: 4px solid #dc2626; }
+        .severity-high { border-left: 4px solid #f97316; }
+        .severity-medium { border-left: 4px solid #eab308; }
+        .severity-low { border-left: 4px solid #3b82f6; }
+
+        .loading-spinner {
+            border: 3px solid #1e293b;
+            border-top: 3px solid #0ea5e9;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Auth Check Overlay -->
+    <div id="authOverlay" class="fixed inset-0 bg-sat-dark z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-gray-400">Loading dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-sat-dark z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8">
+            <div class="text-center mb-8">
+                <img src="../logo.png" alt="Satteli" class="h-12 w-12 mx-auto mb-4">
+                <h1 class="text-2xl font-bold text-sat-dark">SATTELI</h1>
+                <p class="text-gray-500 mt-2">Satellite Monitoring Dashboard</p>
+            </div>
+
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="loginEmail" required
+                        class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue"
+                        placeholder="you@company.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="loginPassword" required
+                        class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue"
+                        placeholder="••••••••">
+                </div>
+                <div id="loginError" class="text-red-500 text-sm hidden"></div>
+                <button type="submit" class="w-full py-3 bg-sat-blue text-white font-semibold rounded-lg hover:bg-sat-cyan transition">
+                    Sign In
+                </button>
+            </form>
+
+            <p class="text-center text-sm text-gray-500 mt-6">
+                Don't have an account? <a href="https://satteli.com/#demo" class="text-sat-blue hover:underline">Request Demo</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Layout -->
+    <div id="dashboard" class="flex h-screen hidden">
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar fixed md:relative z-40 w-64 h-full bg-sat-dark text-white flex flex-col">
+            <!-- Logo -->
+            <div class="p-4 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <img src="../logo.png" alt="Satteli" class="h-9 w-9">
+                    <span class="text-lg font-bold tracking-wider">SATTELI</span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" data-page="overview" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg bg-white/10 text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                    <span>Overview</span>
+                </a>
+                <a href="#" data-page="alerts" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <span>Alerts</span>
+                    <span id="alertBadge" class="ml-auto bg-sat-red text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                </a>
+                <a href="#" data-page="boundaries" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span>Boundaries</span>
+                </a>
+                <a href="#" data-page="reports" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span>Reports</span>
+                </a>
+                <a href="#" data-page="settings" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <!-- User Menu -->
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-sat-blue rounded-full flex items-center justify-center text-white font-semibold" id="userAvatar">
+                        U
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate" id="userName">User</div>
+                        <div class="text-xs text-gray-400 truncate" id="userEmail">user@example.com</div>
+                    </div>
+                    <button onclick="logout()" class="text-gray-400 hover:text-white transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Menu Toggle -->
+        <button id="menuToggle" class="md:hidden fixed top-4 left-4 z-50 bg-sat-dark text-white p-2 rounded-lg">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-hidden">
+
+            <!-- Overview Page -->
+            <div id="page-overview" class="page h-full flex flex-col">
+                <!-- Header -->
+                <header class="bg-white border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Overview</h1>
+                            <p class="text-sm text-gray-500">Real-time monitoring of your plantations</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm text-gray-500">Last updated: <span id="lastUpdated">--</span></span>
+                            <button onclick="refreshData()" class="px-4 py-2 bg-sat-blue text-white text-sm font-medium rounded-lg hover:bg-sat-cyan transition">
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Stats Cards -->
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white rounded-xl p-4 border border-gray-100">
+                            <div class="text-sm text-gray-500 mb-1">Total Area</div>
+                            <div class="text-2xl font-bold text-gray-900" id="statTotalArea">--</div>
+                            <div class="text-xs text-gray-400">hectares monitored</div>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 border border-gray-100">
+                            <div class="text-sm text-gray-500 mb-1">Active Boundaries</div>
+                            <div class="text-2xl font-bold text-gray-900" id="statBoundaries">--</div>
+                            <div class="text-xs text-gray-400">concessions</div>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 border border-gray-100">
+                            <div class="text-sm text-gray-500 mb-1">Open Alerts</div>
+                            <div class="text-2xl font-bold text-sat-red" id="statAlerts">--</div>
+                            <div class="text-xs text-gray-400">require attention</div>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 border border-gray-100">
+                            <div class="text-sm text-gray-500 mb-1">Health Score</div>
+                            <div class="text-2xl font-bold text-sat-green" id="statHealth">--</div>
+                            <div class="text-xs text-gray-400">overall NDVI</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map -->
+                <div class="flex-1 relative">
+                    <div id="map"></div>
+
+                    <!-- Map Legend -->
+                    <div class="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 z-[1000]">
+                        <div class="text-xs font-semibold text-gray-500 mb-2">LEGEND</div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 bg-sat-green rounded"></div>
+                                <span>Healthy</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 bg-sat-orange rounded"></div>
+                                <span>Warning</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 bg-sat-red rounded"></div>
+                                <span>Alert</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alert Panel (right side) -->
+                    <div class="absolute top-4 right-4 w-80 max-h-[calc(100%-2rem)] bg-white rounded-lg shadow-lg overflow-hidden z-[1000]">
+                        <div class="bg-sat-dark text-white px-4 py-3 flex items-center justify-between">
+                            <span class="font-semibold">Recent Alerts</span>
+                            <span class="text-xs bg-sat-red px-2 py-0.5 rounded-full" id="alertCount">0</span>
+                        </div>
+                        <div class="overflow-y-auto max-h-80" id="alertList">
+                            <div class="p-4 text-center text-gray-500 text-sm">
+                                No alerts to display
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-100 p-3">
+                            <a href="#" data-page="alerts" class="nav-link text-sat-blue text-sm font-medium hover:underline">View all alerts →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Page -->
+            <div id="page-alerts" class="page h-full flex flex-col hidden">
+                <header class="bg-white border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Alerts</h1>
+                            <p class="text-sm text-gray-500">Monitor and manage all alerts</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="alertFilter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                                <option value="all">All Alerts</option>
+                                <option value="new">New</option>
+                                <option value="acknowledged">Acknowledged</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                            <select id="alertTypeFilter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                                <option value="all">All Types</option>
+                                <option value="deforestation">Deforestation</option>
+                                <option value="fire">Fire</option>
+                                <option value="crop_stress">Crop Stress</option>
+                            </select>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div class="space-y-4" id="alertsFullList">
+                        <!-- Alerts will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boundaries Page -->
+            <div id="page-boundaries" class="page h-full flex flex-col hidden">
+                <header class="bg-white border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Boundaries</h1>
+                            <p class="text-sm text-gray-500">Manage your monitored areas</p>
+                        </div>
+                        <button onclick="showAddBoundaryModal()" class="px-4 py-2 bg-sat-blue text-white text-sm font-medium rounded-lg hover:bg-sat-cyan transition">
+                            + Add Boundary
+                        </button>
+                    </div>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4" id="boundariesList">
+                        <!-- Boundaries will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div id="page-reports" class="page h-full flex flex-col hidden">
+                <header class="bg-white border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Reports</h1>
+                            <p class="text-sm text-gray-500">Historical analysis and exports</p>
+                        </div>
+                        <button class="px-4 py-2 bg-sat-blue text-white text-sm font-medium rounded-lg hover:bg-sat-cyan transition">
+                            Generate Report
+                        </button>
+                    </div>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Report</th>
+                                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
+                                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Generated</th>
+                                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsList">
+                                <tr class="border-t border-gray-100">
+                                    <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                                        No reports generated yet
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="page-settings" class="page h-full flex flex-col hidden">
+                <header class="bg-white border-b border-gray-200 px-6 py-4">
+                    <h1 class="text-xl font-bold text-gray-900">Settings</h1>
+                    <p class="text-sm text-gray-500">Manage your account and notifications</p>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div class="max-w-2xl space-y-6">
+                        <!-- Profile Section -->
+                        <div class="bg-white rounded-xl border border-gray-200 p-6">
+                            <h2 class="text-lg font-semibold mb-4">Profile</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                                    <input type="text" id="settingsCompany" class="w-full px-4 py-2 border border-gray-200 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input type="email" id="settingsEmail" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+                                    <input type="tel" id="settingsPhone" class="w-full px-4 py-2 border border-gray-200 rounded-lg" placeholder="628xxxxxxxxxx">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notification Settings -->
+                        <div class="bg-white rounded-xl border border-gray-200 p-6">
+                            <h2 class="text-lg font-semibold mb-4">Notifications</h2>
+                            <div class="space-y-4">
+                                <label class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium">WhatsApp Alerts</div>
+                                        <div class="text-sm text-gray-500">Receive instant alerts via WhatsApp</div>
+                                    </div>
+                                    <input type="checkbox" id="notifyWhatsapp" class="w-5 h-5 text-sat-blue rounded" checked>
+                                </label>
+                                <label class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium">Email Alerts</div>
+                                        <div class="text-sm text-gray-500">Receive alerts via email</div>
+                                    </div>
+                                    <input type="checkbox" id="notifyEmail" class="w-5 h-5 text-sat-blue rounded" checked>
+                                </label>
+                                <label class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium">Weekly Summary</div>
+                                        <div class="text-sm text-gray-500">Receive weekly report digest</div>
+                                    </div>
+                                    <input type="checkbox" id="notifyWeekly" class="w-5 h-5 text-sat-blue rounded" checked>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Alert Thresholds -->
+                        <div class="bg-white rounded-xl border border-gray-200 p-6">
+                            <h2 class="text-lg font-semibold mb-4">Alert Thresholds</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Minimum deforestation area to alert (hectares)
+                                    </label>
+                                    <input type="number" id="thresholdDeforest" value="0.5" step="0.1" min="0.1"
+                                        class="w-full px-4 py-2 border border-gray-200 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        NDVI change threshold
+                                    </label>
+                                    <input type="number" id="thresholdNdvi" value="0.3" step="0.05" min="0.1" max="1"
+                                        class="w-full px-4 py-2 border border-gray-200 rounded-lg">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="saveSettings()" class="w-full py-3 bg-sat-blue text-white font-semibold rounded-lg hover:bg-sat-cyan transition">
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Add Boundary Modal -->
+    <div id="addBoundaryModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6">
+            <h2 class="text-xl font-bold mb-4">Add New Boundary</h2>
+            <form id="addBoundaryForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Boundary Name</label>
+                    <input type="text" id="boundaryName" required
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg"
+                        placeholder="e.g., Block A - North">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">GeoJSON / KML</label>
+                    <textarea id="boundaryGeojson" rows="6" required
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg font-mono text-sm"
+                        placeholder='{"type": "Polygon", "coordinates": [[[lng, lat], ...]]}'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Paste GeoJSON polygon or upload KML file</p>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAddBoundaryModal()"
+                        class="flex-1 py-2 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 py-2 bg-sat-blue text-white rounded-lg font-medium hover:bg-sat-cyan transition">
+                        Add Boundary
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURATION
+        // ============================================================
+
+        // Supabase configuration - replace with your values
+        const SUPABASE_URL = 'https://your-project.supabase.co';
+        const SUPABASE_ANON_KEY = 'your-anon-key';
+
+        // Initialize Supabase client
+        let supabase = null;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.log('Supabase not configured, using demo mode');
+        }
+
+        // App state
+        let currentUser = null;
+        let customerData = null;
+        let boundaries = [];
+        let alerts = [];
+        let map = null;
+
+        // ============================================================
+        // DEMO DATA (used when Supabase is not configured)
+        // ============================================================
+
+        const DEMO_USER = {
+            id: 'demo-user',
+            email: 'demo@satteli.com',
+            user_metadata: { name: 'Demo User' }
+        };
+
+        const DEMO_CUSTOMER = {
+            id: 'CUST001',
+            name: 'PT Sawit Makmur',
+            company: 'Sawit Makmur Group',
+            email: 'demo@satteli.com',
+            phone: '6281234567890',
+            total_hectares: 5200
+        };
+
+        const DEMO_BOUNDARIES = [
+            {
+                id: 'BND001',
+                name: 'Block A - Riau North',
+                hectares: 1100,
+                status: 'healthy',
+                geojson: {
+                    type: 'Polygon',
+                    coordinates: [[[102.05, 1.45], [102.15, 1.45], [102.15, 1.55], [102.05, 1.55], [102.05, 1.45]]]
+                }
+            },
+            {
+                id: 'BND002',
+                name: 'Block B - Riau South',
+                hectares: 1200,
+                status: 'warning',
+                geojson: {
+                    type: 'Polygon',
+                    coordinates: [[[102.10, 1.30], [102.20, 1.30], [102.20, 1.40], [102.10, 1.40], [102.10, 1.30]]]
+                }
+            },
+            {
+                id: 'BND003',
+                name: 'Block C - Jambi',
+                hectares: 950,
+                status: 'alert',
+                geojson: {
+                    type: 'Polygon',
+                    coordinates: [[[103.50, -1.60], [103.60, -1.60], [103.60, -1.50], [103.50, -1.50], [103.50, -1.60]]]
+                }
+            },
+            {
+                id: 'BND004',
+                name: 'Block D - Kalimantan',
+                hectares: 1950,
+                status: 'healthy',
+                geojson: {
+                    type: 'Polygon',
+                    coordinates: [[[116.80, -0.50], [116.95, -0.50], [116.95, -0.35], [116.80, -0.35], [116.80, -0.50]]]
+                }
+            }
+        ];
+
+        const DEMO_ALERTS = [
+            {
+                id: 'ALT001',
+                boundary_id: 'BND003',
+                boundary_name: 'Block C - Jambi',
+                type: 'deforestation',
+                severity: 'high',
+                title: 'Deforestation detected in Block C',
+                description: '2.3 hectares of vegetation loss detected in the northeast corner.',
+                affected_hectares: 2.3,
+                status: 'new',
+                detected_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+                coordinates: { lat: -1.55, lon: 103.58 }
+            },
+            {
+                id: 'ALT002',
+                boundary_id: 'BND002',
+                boundary_name: 'Block B - Riau South',
+                type: 'fire',
+                severity: 'critical',
+                title: 'Fire hotspot detected',
+                description: '3 active fire hotspots detected within boundary.',
+                affected_hectares: null,
+                status: 'new',
+                detected_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+                coordinates: { lat: 1.35, lon: 102.15 }
+            },
+            {
+                id: 'ALT003',
+                boundary_id: 'BND001',
+                boundary_name: 'Block A - Riau North',
+                type: 'crop_stress',
+                severity: 'low',
+                title: 'Minor crop stress detected',
+                description: 'NDVI decline of 0.15 in western section. May indicate water stress.',
+                affected_hectares: 12.5,
+                status: 'acknowledged',
+                detected_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+                coordinates: { lat: 1.50, lon: 102.08 }
+            }
+        ];
+
+        // ============================================================
+        // AUTHENTICATION
+        // ============================================================
+
+        async function checkAuth() {
+            // Demo mode if Supabase not configured
+            if (!supabase || SUPABASE_URL.includes('your-project')) {
+                console.log('Running in demo mode');
+                currentUser = DEMO_USER;
+                customerData = DEMO_CUSTOMER;
+                boundaries = DEMO_BOUNDARIES;
+                alerts = DEMO_ALERTS;
+                showDashboard();
+                return;
+            }
+
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (user) {
+                currentUser = user;
+                await loadCustomerData();
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('authOverlay').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginModal').classList.add('flex');
+        }
+
+        function showDashboard() {
+            document.getElementById('authOverlay').classList.add('hidden');
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('flex');
+
+            // Update user info
+            const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User';
+            document.getElementById('userName').textContent = name;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+
+            // Initialize map and load data
+            initMap();
+            updateStats();
+            renderAlerts();
+            renderBoundaries();
+        }
+
+        async function login(email, password) {
+            if (!supabase || SUPABASE_URL.includes('your-project')) {
+                // Demo mode - accept any credentials
+                currentUser = { ...DEMO_USER, email };
+                customerData = DEMO_CUSTOMER;
+                boundaries = DEMO_BOUNDARIES;
+                alerts = DEMO_ALERTS;
+                showDashboard();
+                return;
+            }
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                throw error;
+            }
+
+            currentUser = data.user;
+            await loadCustomerData();
+            showDashboard();
+        }
+
+        async function logout() {
+            if (supabase && !SUPABASE_URL.includes('your-project')) {
+                await supabase.auth.signOut();
+            }
+            window.location.reload();
+        }
+
+        async function loadCustomerData() {
+            if (!supabase) return;
+
+            // Load customer profile
+            const { data: customer } = await supabase
+                .from('customers')
+                .select('*')
+                .eq('email', currentUser.email)
+                .single();
+
+            if (customer) {
+                customerData = customer;
+
+                // Load boundaries
+                const { data: boundaryData } = await supabase
+                    .from('boundaries')
+                    .select('*')
+                    .eq('customer_id', customer.id);
+
+                boundaries = boundaryData || [];
+
+                // Load alerts
+                const { data: alertData } = await supabase
+                    .from('alerts')
+                    .select('*')
+                    .eq('customer_id', customer.id)
+                    .order('detected_at', { ascending: false });
+
+                alerts = alertData || [];
+            }
+        }
+
+        // ============================================================
+        // MAP
+        // ============================================================
+
+        function initMap() {
+            if (map) return;
+
+            map = L.map('map', {
+                center: [0, 110],
+                zoom: 5
+            });
+
+            // Satellite layer
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Esri'
+            }).addTo(map);
+
+            // Add boundaries to map
+            renderBoundariesOnMap();
+        }
+
+        function renderBoundariesOnMap() {
+            if (!map) return;
+
+            // Clear existing layers
+            map.eachLayer(layer => {
+                if (layer instanceof L.Polygon || layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            const boundsGroup = [];
+
+            boundaries.forEach(boundary => {
+                const statusColors = {
+                    healthy: '#10b981',
+                    warning: '#f59e0b',
+                    alert: '#ef4444'
+                };
+
+                const color = statusColors[boundary.status] || '#0ea5e9';
+
+                // Add polygon
+                const coords = boundary.geojson.coordinates[0].map(c => [c[1], c[0]]);
+                const polygon = L.polygon(coords, {
+                    color: color,
+                    weight: 2,
+                    fillColor: color,
+                    fillOpacity: 0.2
+                }).addTo(map);
+
+                polygon.bindPopup(`
+                    <div class="p-2">
+                        <div class="font-semibold">${boundary.name}</div>
+                        <div class="text-sm text-gray-300">${boundary.hectares?.toLocaleString() || '--'} ha</div>
+                        <div class="text-xs mt-1 capitalize">${boundary.status}</div>
+                    </div>
+                `, { className: 'custom-popup' });
+
+                boundsGroup.push(polygon);
+            });
+
+            // Add alert markers
+            alerts.filter(a => a.status === 'new' && a.coordinates).forEach(alert => {
+                const icon = L.divIcon({
+                    html: `<div class="w-6 h-6 bg-red-500 rounded-full border-2 border-white flex items-center justify-center alert-pulse">
+                        <span class="text-white text-xs">!</span>
+                    </div>`,
+                    className: '',
+                    iconSize: [24, 24]
+                });
+
+                L.marker([alert.coordinates.lat, alert.coordinates.lon], { icon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div class="p-2">
+                            <div class="font-semibold text-red-400">${alert.type.toUpperCase()}</div>
+                            <div class="text-sm">${alert.title}</div>
+                        </div>
+                    `, { className: 'custom-popup' });
+            });
+
+            // Fit map to boundaries
+            if (boundsGroup.length > 0) {
+                const group = L.featureGroup(boundsGroup);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
+
+        // ============================================================
+        // UI UPDATES
+        // ============================================================
+
+        function updateStats() {
+            const totalArea = boundaries.reduce((sum, b) => sum + (b.hectares || 0), 0);
+            const openAlerts = alerts.filter(a => a.status === 'new').length;
+
+            document.getElementById('statTotalArea').textContent = totalArea.toLocaleString();
+            document.getElementById('statBoundaries').textContent = boundaries.length;
+            document.getElementById('statAlerts').textContent = openAlerts;
+            document.getElementById('statHealth').textContent = '0.72'; // Demo value
+
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+
+            // Update alert badge
+            const badge = document.getElementById('alertBadge');
+            if (openAlerts > 0) {
+                badge.textContent = openAlerts;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            document.getElementById('alertCount').textContent = openAlerts;
+        }
+
+        function renderAlerts() {
+            const listEl = document.getElementById('alertList');
+            const fullListEl = document.getElementById('alertsFullList');
+
+            if (alerts.length === 0) {
+                listEl.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">No alerts</div>';
+                fullListEl.innerHTML = '<div class="p-8 text-center text-gray-500">No alerts to display</div>';
+                return;
+            }
+
+            // Sidebar alert list (recent 5)
+            listEl.innerHTML = alerts.slice(0, 5).map(alert => `
+                <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer severity-${alert.severity}">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-sm font-medium">${alert.title}</div>
+                            <div class="text-xs text-gray-500">${alert.boundary_name}</div>
+                        </div>
+                        <span class="status-badge status-${alert.status}">${alert.status}</span>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">${formatTimeAgo(alert.detected_at)}</div>
+                </div>
+            `).join('');
+
+            // Full alerts page
+            fullListEl.innerHTML = alerts.map(alert => `
+                <div class="bg-white rounded-xl border border-gray-200 p-4 severity-${alert.severity}">
+                    <div class="flex items-start justify-between mb-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">${getAlertIcon(alert.type)}</span>
+                                <h3 class="font-semibold">${alert.title}</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">${alert.boundary_name}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="status-badge status-${alert.status}">${alert.status}</span>
+                            <span class="px-2 py-1 text-xs font-medium rounded bg-gray-100 capitalize">${alert.severity}</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">${alert.description}</p>
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="text-gray-500">
+                            ${alert.affected_hectares ? `${alert.affected_hectares} ha affected • ` : ''}
+                            ${formatTimeAgo(alert.detected_at)}
+                        </div>
+                        <div class="flex gap-2">
+                            ${alert.status === 'new' ? `
+                                <button onclick="acknowledgeAlert('${alert.id}')" class="px-3 py-1 text-sat-blue border border-sat-blue rounded hover:bg-sat-blue hover:text-white transition text-sm">
+                                    Acknowledge
+                                </button>
+                            ` : ''}
+                            ${alert.status !== 'resolved' ? `
+                                <button onclick="resolveAlert('${alert.id}')" class="px-3 py-1 text-sat-green border border-sat-green rounded hover:bg-sat-green hover:text-white transition text-sm">
+                                    Resolve
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderBoundaries() {
+            const listEl = document.getElementById('boundariesList');
+
+            if (boundaries.length === 0) {
+                listEl.innerHTML = '<div class="col-span-full p-8 text-center text-gray-500">No boundaries configured</div>';
+                return;
+            }
+
+            listEl.innerHTML = boundaries.map(boundary => `
+                <div class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition">
+                    <div class="flex items-start justify-between mb-3">
+                        <div>
+                            <h3 class="font-semibold">${boundary.name}</h3>
+                            <p class="text-sm text-gray-500">${boundary.hectares?.toLocaleString() || '--'} hectares</p>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded capitalize ${
+                            boundary.status === 'healthy' ? 'bg-green-100 text-green-700' :
+                            boundary.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                        }">
+                            ${boundary.status}
+                        </span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="focusBoundary('${boundary.id}')" class="flex-1 py-2 text-sm text-sat-blue border border-sat-blue rounded hover:bg-sat-blue hover:text-white transition">
+                            View on Map
+                        </button>
+                        <button onclick="deleteBoundary('${boundary.id}')" class="px-3 py-2 text-gray-400 hover:text-red-500 transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================================
+        // ACTIONS
+        // ============================================================
+
+        function acknowledgeAlert(alertId) {
+            const alert = alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.status = 'acknowledged';
+                renderAlerts();
+                updateStats();
+            }
+        }
+
+        function resolveAlert(alertId) {
+            const alert = alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.status = 'resolved';
+                renderAlerts();
+                updateStats();
+            }
+        }
+
+        function focusBoundary(boundaryId) {
+            const boundary = boundaries.find(b => b.id === boundaryId);
+            if (boundary && map) {
+                const coords = boundary.geojson.coordinates[0].map(c => [c[1], c[0]]);
+                map.fitBounds(coords, { padding: [50, 50] });
+                navigateTo('overview');
+            }
+        }
+
+        function deleteBoundary(boundaryId) {
+            if (confirm('Are you sure you want to delete this boundary?')) {
+                boundaries = boundaries.filter(b => b.id !== boundaryId);
+                renderBoundaries();
+                renderBoundariesOnMap();
+                updateStats();
+            }
+        }
+
+        function showAddBoundaryModal() {
+            document.getElementById('addBoundaryModal').classList.remove('hidden');
+            document.getElementById('addBoundaryModal').classList.add('flex');
+        }
+
+        function closeAddBoundaryModal() {
+            document.getElementById('addBoundaryModal').classList.add('hidden');
+            document.getElementById('addBoundaryModal').classList.remove('flex');
+        }
+
+        function refreshData() {
+            updateStats();
+            renderBoundariesOnMap();
+        }
+
+        function saveSettings() {
+            alert('Settings saved!');
+        }
+
+        // ============================================================
+        // NAVIGATION
+        // ============================================================
+
+        function navigateTo(page) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+
+            // Show selected page
+            document.getElementById(`page-${page}`).classList.remove('hidden');
+
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.dataset.page === page) {
+                    link.classList.add('bg-white/10', 'text-white');
+                    link.classList.remove('text-gray-400');
+                } else {
+                    link.classList.remove('bg-white/10', 'text-white');
+                    link.classList.add('text-gray-400');
+                }
+            });
+
+            // Close mobile sidebar
+            document.getElementById('sidebar').classList.add('collapsed');
+        }
+
+        // ============================================================
+        // HELPERS
+        // ============================================================
+
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
+        }
+
+        function getAlertIcon(type) {
+            const icons = {
+                deforestation: '🌲',
+                fire: '🔥',
+                crop_stress: '🌾'
+            };
+            return icons[type] || '⚠️';
+        }
+
+        // ============================================================
+        // EVENT LISTENERS
+        // ============================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check authentication
+            checkAuth();
+
+            // Login form
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                const errorEl = document.getElementById('loginError');
+
+                try {
+                    await login(email, password);
+                } catch (error) {
+                    errorEl.textContent = error.message || 'Login failed';
+                    errorEl.classList.remove('hidden');
+                }
+            });
+
+            // Navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = link.dataset.page;
+                    if (page) navigateTo(page);
+                });
+            });
+
+            // Mobile menu toggle
+            document.getElementById('menuToggle').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('collapsed');
+            });
+
+            // Add boundary form
+            document.getElementById('addBoundaryForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('boundaryName').value;
+                const geojsonStr = document.getElementById('boundaryGeojson').value;
+
+                try {
+                    const geojson = JSON.parse(geojsonStr);
+                    const newBoundary = {
+                        id: 'BND' + Date.now(),
+                        name: name,
+                        hectares: 0,
+                        status: 'healthy',
+                        geojson: geojson
+                    };
+                    boundaries.push(newBoundary);
+                    renderBoundaries();
+                    renderBoundariesOnMap();
+                    updateStats();
+                    closeAddBoundaryModal();
+                    document.getElementById('addBoundaryForm').reset();
+                } catch (err) {
+                    alert('Invalid GeoJSON format');
+                }
+            });
+
+            // Alert filters
+            document.getElementById('alertFilter').addEventListener('change', (e) => {
+                // Filter implementation
+                console.log('Filter by status:', e.target.value);
+            });
+
+            document.getElementById('alertTypeFilter').addEventListener('change', (e) => {
+                // Filter implementation
+                console.log('Filter by type:', e.target.value);
+            });
+        });
+    </script>
+</body>
+</html>
