@@ -858,28 +858,27 @@
                 <p class="text-gray-600 max-w-2xl mx-auto" data-i18n="pricing_desc">Lebih murah dari sekali kunjungan ke lokasi. Tanpa biaya tersembunyi. Batalkan kapan saja.</p>
             </div>
 
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                 <!-- Free -->
-                <div class="bg-white rounded-2xl p-6 border-2 border-sat-green">
-                    <div class="inline-block bg-sat-green/10 text-sat-green text-xs font-bold px-2 py-1 rounded mb-3" data-i18n="price_free_badge">GRATIS SELAMANYA</div>
-                    <h3 class="text-xl font-bold mb-2">Coba</h3>
-                    <p class="text-gray-600 text-sm mb-4" data-i18n="price_free_desc">Untuk coba-coba dulu</p>
+                <div class="bg-white rounded-2xl p-6 border border-gray-200">
+                    <div class="inline-block bg-sat-green/10 text-sat-green text-xs font-bold px-2 py-1 rounded mb-3" data-i18n="price_free_badge">GRATIS</div>
+                    <h3 class="text-xl font-bold mb-2">Coba Dulu</h3>
+                    <p class="text-gray-600 text-sm mb-4" data-i18n="price_free_desc">Lihat cara kerjanya</p>
                     <div class="mb-4">
                         <span class="text-4xl font-bold">Rp 0</span>
-                        <span class="text-gray-500" data-i18n="price_unit">/bulan</span>
                     </div>
                     <ul class="space-y-2 mb-6 text-sm">
                         <li class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_free_f1">1 boundary (maks 500 ha)</span>
+                            <span data-i18n="price_free_f1">1 area, maks 500 ha</span>
                         </li>
                         <li class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_free_f2">Alert email bulanan</span>
+                            <span data-i18n="price_free_f2">Laporan email bulanan</span>
                         </li>
                         <li class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_free_f3">Deteksi perubahan lahan</span>
+                            <span data-i18n="price_free_f3">Deteksi perubahan dasar</span>
                         </li>
                     </ul>
                     <a href="#demo" class="block text-center py-2.5 border border-sat-green text-sat-green rounded-lg font-semibold hover:bg-sat-green hover:text-white transition" data-i18n="price_cta_free">
@@ -887,68 +886,45 @@
                     </a>
                 </div>
 
-                <!-- Pemilik -->
-                <div class="bg-white rounded-2xl p-6 border border-gray-200">
-                    <h3 class="text-xl font-bold mb-2">Pemilik</h3>
-                    <p class="text-gray-600 text-sm mb-4" data-i18n="price_starter_desc">Untuk pemilik lahan di luar kota</p>
-                    <div class="mb-4">
-                        <span class="text-4xl font-bold">Rp 500rb</span>
-                        <span class="text-gray-500" data-i18n="price_unit">/bulan</span>
-                    </div>
-                    <ul class="space-y-3 mb-8 text-sm">
-                        <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_starter_f1">Hingga 2.000 hektar</span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_starter_f2">Alert WhatsApp mingguan</span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_starter_f3">Deteksi penyerobotan & kebakaran</span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_starter_f4">Laporan bulanan PDF</span>
-                        </li>
-                    </ul>
-                    <a href="#demo" class="block text-center py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition" data-i18n="price_cta_trial">
-                        Coba 14 Hari Gratis
-                    </a>
-                </div>
-
-                <!-- Profesional -->
+                <!-- Per-Hectare (Main) -->
                 <div class="bg-sat-dark text-white rounded-2xl p-8 relative">
                     <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-sat-blue text-white text-sm font-bold px-4 py-1 rounded-full" data-i18n="price_popular">
-                        PALING POPULER
+                        PALING FLEKSIBEL
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Profesional</h3>
-                    <p class="text-gray-400 text-sm mb-6" data-i18n="price_pro_desc">Untuk perkebunan menengah</p>
-                    <div class="mb-6">
-                        <span class="text-4xl font-bold">Rp 1.5jt</span>
-                        <span class="text-gray-400" data-i18n="price_unit">/bulan</span>
+                    <h3 class="text-xl font-bold mb-2">Per Hektar</h3>
+                    <p class="text-gray-400 text-sm mb-4" data-i18n="price_perhektar_desc">Bayar sesuai luas lahan</p>
+                    <div class="mb-2">
+                        <span class="text-4xl font-bold">Rp 500</span>
+                        <span class="text-gray-400" data-i18n="price_unit_ha">/ha/bulan</span>
                     </div>
-                    <ul class="space-y-3 mb-8 text-sm">
+                    <p class="text-sat-cyan text-sm mb-6" data-i18n="price_minimum">Minimum Rp 750rb/bulan</p>
+
+                    <!-- Price Examples -->
+                    <div class="bg-white/10 rounded-lg p-4 mb-6">
+                        <p class="text-xs text-gray-400 mb-2" data-i18n="price_examples">Contoh:</p>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between"><span>1.000 ha</span><span class="text-sat-cyan">Rp 750rb/bln</span></div>
+                            <div class="flex justify-between"><span>2.000 ha</span><span class="text-sat-cyan">Rp 1jt/bln</span></div>
+                            <div class="flex justify-between"><span>5.000 ha</span><span class="text-sat-cyan">Rp 2.5jt/bln</span></div>
+                        </div>
+                    </div>
+
+                    <ul class="space-y-2 mb-6 text-sm">
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_pro_f1">Hingga 10.000 hektar</span>
+                            <svg class="w-4 h-4 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span data-i18n="price_std_f1">Alert WhatsApp mingguan</span>
                         </li>
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_pro_f2">Laporan historis & perbandingan</span>
+                            <svg class="w-4 h-4 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span data-i18n="price_std_f2">Deteksi penyerobotan & kebakaran</span>
                         </li>
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_pro_f3">Bukti satelit untuk sengketa</span>
+                            <svg class="w-4 h-4 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span data-i18n="price_std_f3">Laporan PDF & bukti sengketa</span>
                         </li>
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_pro_f4">Dukungan WhatsApp prioritas</span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_pro_f5">Account manager khusus</span>
+                            <svg class="w-4 h-4 text-sat-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span data-i18n="price_std_f4">Dukungan WhatsApp</span>
                         </li>
                     </ul>
                     <a href="#demo" class="block text-center py-3 bg-sat-blue rounded-lg font-semibold hover:bg-sat-cyan transition" data-i18n="price_cta_trial">
@@ -957,38 +933,39 @@
                 </div>
 
                 <!-- Enterprise -->
-                <div class="bg-white rounded-2xl p-8 border border-gray-200">
+                <div class="bg-white rounded-2xl p-6 border border-gray-200">
                     <h3 class="text-xl font-bold mb-2">Enterprise</h3>
-                    <p class="text-gray-600 text-sm mb-6" data-i18n="price_ent_desc">Untuk perkebunan besar</p>
-                    <div class="mb-6">
+                    <p class="text-gray-600 text-sm mb-4" data-i18n="price_ent_desc">Untuk 10.000+ hektar</p>
+                    <div class="mb-4">
                         <span class="text-4xl font-bold" data-i18n="price_custom">Kustom</span>
                     </div>
-                    <ul class="space-y-3 mb-8 text-sm">
+                    <ul class="space-y-2 mb-6 text-sm">
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_ent_f1">Hektar tak terbatas</span>
+                            <svg class="w-4 h-4 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span data-i18n="price_ent_f1">Diskon volume</span>
                         </li>
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_ent_f2">Citra resolusi lebih tinggi</span>
+                            <svg class="w-4 h-4 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span data-i18n="price_ent_f2">Resolusi lebih tinggi</span>
                         </li>
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <svg class="w-4 h-4 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             <span data-i18n="price_ent_f3">Account manager khusus</span>
                         </li>
                         <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_ent_f4">Integrasi kustom</span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span data-i18n="price_ent_f5">Jaminan SLA</span>
+                            <svg class="w-4 h-4 text-sat-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span data-i18n="price_ent_f4">API & integrasi</span>
                         </li>
                     </ul>
-                    <a href="#contact" class="block text-center py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition" data-i18n="price_cta_contact">
-                        Hubungi Sales
+                    <a href="#contact" class="block text-center py-2.5 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition" data-i18n="price_cta_contact">
+                        Hubungi Kami
                     </a>
                 </div>
+            </div>
+
+            <!-- Value comparison -->
+            <div class="mt-12 text-center">
+                <p class="text-gray-500 text-sm" data-i18n="price_compare">Bandingkan: 1x kunjungan ke lokasi = Rp 3-5 juta (pesawat + hotel + waktu)</p>
             </div>
         </div>
     </section>
@@ -1302,33 +1279,30 @@
                 pricing_title: 'Investasi Kecil, Ketenangan Besar',
                 pricing_desc: 'Lebih murah dari sekali kunjungan ke lokasi. Tanpa biaya tersembunyi. Batalkan kapan saja.',
                 price_unit: '/bulan',
-                price_free_badge: 'GRATIS SELAMANYA',
-                price_free_desc: 'Untuk coba-coba dulu',
-                price_free_f1: '1 boundary (maks 500 ha)',
-                price_free_f2: 'Alert email bulanan',
-                price_free_f3: 'Deteksi perubahan lahan',
+                price_free_badge: 'GRATIS',
+                price_free_desc: 'Lihat cara kerjanya',
+                price_free_f1: '1 area, maks 500 ha',
+                price_free_f2: 'Laporan email bulanan',
+                price_free_f3: 'Deteksi perubahan dasar',
                 price_cta_free: 'Mulai Gratis',
-                price_starter_desc: 'Untuk pemilik lahan di luar kota',
-                price_starter_f1: 'Hingga 2.000 hektar',
-                price_starter_f2: 'Alert WhatsApp mingguan',
-                price_starter_f3: 'Deteksi penyerobotan & kebakaran',
-                price_starter_f4: 'Laporan bulanan PDF',
+                price_popular: 'PALING FLEKSIBEL',
+                price_perhektar_desc: 'Bayar sesuai luas lahan',
+                price_unit_ha: '/ha/bulan',
+                price_minimum: 'Minimum Rp 750rb/bulan',
+                price_examples: 'Contoh:',
+                price_std_f1: 'Alert WhatsApp mingguan',
+                price_std_f2: 'Deteksi penyerobotan & kebakaran',
+                price_std_f3: 'Laporan PDF & bukti sengketa',
+                price_std_f4: 'Dukungan WhatsApp',
                 price_cta_trial: 'Coba 14 Hari Gratis',
-                price_popular: 'PALING POPULER',
-                price_pro_desc: 'Untuk perkebunan menengah',
-                price_pro_f1: 'Hingga 10.000 hektar',
-                price_pro_f2: 'Laporan historis & perbandingan',
-                price_pro_f3: 'Bukti satelit untuk sengketa',
-                price_pro_f4: 'Dukungan WhatsApp prioritas',
-                price_pro_f5: 'Account manager khusus',
-                price_ent_desc: 'Untuk perkebunan besar',
+                price_ent_desc: 'Untuk 10.000+ hektar',
                 price_custom: 'Kustom',
-                price_ent_f1: 'Hektar tak terbatas',
-                price_ent_f2: 'Citra resolusi lebih tinggi',
+                price_ent_f1: 'Diskon volume',
+                price_ent_f2: 'Resolusi lebih tinggi',
                 price_ent_f3: 'Account manager khusus',
-                price_ent_f4: 'Integrasi kustom',
-                price_ent_f5: 'Jaminan SLA',
-                price_cta_contact: 'Hubungi Sales',
+                price_ent_f4: 'API & integrasi',
+                price_cta_contact: 'Hubungi Kami',
+                price_compare: 'Bandingkan: 1x kunjungan ke lokasi = Rp 3-5 juta (pesawat + hotel + waktu)',
 
                 // CTA
                 cta_title: 'Mulai Pantau Lahan Anda Sekarang',
@@ -1540,33 +1514,30 @@
                 pricing_title: 'Small Investment, Big Peace of Mind',
                 pricing_desc: 'Cheaper than one site visit. No hidden fees. Cancel anytime.',
                 price_unit: '/month',
-                price_free_badge: 'FREE FOREVER',
-                price_free_desc: 'For testing first',
-                price_free_f1: '1 boundary (max 500 ha)',
-                price_free_f2: 'Monthly email alerts',
-                price_free_f3: 'Land change detection',
+                price_free_badge: 'FREE',
+                price_free_desc: 'See how it works',
+                price_free_f1: '1 area, max 500 ha',
+                price_free_f2: 'Monthly email reports',
+                price_free_f3: 'Basic change detection',
                 price_cta_free: 'Start Free',
-                price_starter_desc: 'For remote landowners',
-                price_starter_f1: 'Up to 2,000 hectares',
-                price_starter_f2: 'Weekly WhatsApp alerts',
-                price_starter_f3: 'Encroachment & fire detection',
-                price_starter_f4: 'Monthly PDF reports',
+                price_popular: 'MOST FLEXIBLE',
+                price_perhektar_desc: 'Pay based on land size',
+                price_unit_ha: '/ha/month',
+                price_minimum: 'Minimum Rp 750K/month',
+                price_examples: 'Examples:',
+                price_std_f1: 'Weekly WhatsApp alerts',
+                price_std_f2: 'Encroachment & fire detection',
+                price_std_f3: 'PDF reports & dispute evidence',
+                price_std_f4: 'WhatsApp support',
                 price_cta_trial: 'Try 14 Days Free',
-                price_popular: 'MOST POPULAR',
-                price_pro_desc: 'For medium plantations',
-                price_pro_f1: 'Up to 10,000 hectares',
-                price_pro_f2: 'Historical reports & comparison',
-                price_pro_f3: 'Satellite evidence for disputes',
-                price_pro_f4: 'Priority WhatsApp support',
-                price_pro_f5: 'Dedicated account manager',
-                price_ent_desc: 'For large plantations',
+                price_ent_desc: 'For 10,000+ hectares',
                 price_custom: 'Custom',
-                price_ent_f1: 'Unlimited hectares',
-                price_ent_f2: 'Higher resolution imagery',
+                price_ent_f1: 'Volume discount',
+                price_ent_f2: 'Higher resolution',
                 price_ent_f3: 'Dedicated account manager',
-                price_ent_f4: 'Custom integrations',
-                price_ent_f5: 'SLA guarantee',
-                price_cta_contact: 'Contact Sales',
+                price_ent_f4: 'API & integrations',
+                price_cta_contact: 'Contact Us',
+                price_compare: 'Compare: 1 site visit = Rp 3-5 million (flights + hotel + time)',
 
                 // CTA
                 cta_title: 'Start Monitoring Your Land Now',
