@@ -32,6 +32,12 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- Leaflet for map drawing -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
     <style>
         * { font-family: 'Inter', sans-serif; }
 
@@ -773,29 +779,30 @@
                         </ul>
                     </div>
 
-                    <div class="bg-white rounded-2xl p-8 text-gray-900">
-                        <h3 class="text-xl font-bold mb-6" data-i18n="form_title">Minta Analisis Gratis</h3>
-                        <form class="space-y-4">
-                            <div>
-                                <input type="text" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue" data-i18n-placeholder="form_name" placeholder="Nama Lengkap">
+                    <div class="bg-white rounded-2xl p-6 lg:p-8 text-gray-900">
+                        <h3 class="text-xl font-bold mb-2" data-i18n="form_title">Minta Analisis Gratis</h3>
+                        <p class="text-sm text-gray-500 mb-4" data-i18n="form_map_hint">Gambar area perkebunan Anda di peta</p>
+
+                        <!-- Map for drawing boundary -->
+                        <div class="mb-4">
+                            <div id="drawMap" class="w-full h-48 lg:h-56 rounded-lg border border-gray-200 z-0"></div>
+                            <div id="areaDisplay" class="hidden mt-2 p-3 bg-sat-green/10 border border-sat-green/30 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600" data-i18n="form_area">Luas area:</span>
+                                    <span id="areaValue" class="font-bold text-sat-green">0 ha</span>
+                                </div>
                             </div>
-                            <div>
-                                <input type="email" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue" data-i18n-placeholder="form_email" placeholder="Email Kerja">
+                        </div>
+
+                        <form id="demoForm" class="space-y-3">
+                            <input type="hidden" id="boundaryData" name="boundary">
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="text" id="formName" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue text-sm" data-i18n-placeholder="form_name" placeholder="Nama Lengkap">
+                                <input type="text" id="formCompany" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue text-sm" data-i18n-placeholder="form_company" placeholder="Nama Perusahaan">
                             </div>
-                            <div>
-                                <input type="text" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue" data-i18n-placeholder="form_company" placeholder="Nama Perusahaan">
-                            </div>
-                            <div>
-                                <select class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue text-gray-500">
-                                    <option value="" data-i18n="form_hectares">Total Hektar yang Dikelola</option>
-                                    <option value="<10000" data-i18n="form_ha_1">Kurang dari 10.000 ha</option>
-                                    <option value="10000-50000" data-i18n="form_ha_2">10.000 - 50.000 ha</option>
-                                    <option value="50000-100000" data-i18n="form_ha_3">50.000 - 100.000 ha</option>
-                                    <option value=">100000" data-i18n="form_ha_4">Lebih dari 100.000 ha</option>
-                                </select>
-                            </div>
-                            <div>
-                                <input type="tel" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue" data-i18n-placeholder="form_phone" placeholder="Nomor WhatsApp">
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="email" id="formEmail" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue text-sm" data-i18n-placeholder="form_email" placeholder="Email Kerja">
+                                <input type="tel" id="formPhone" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue text-sm" data-i18n-placeholder="form_phone" placeholder="Nomor WhatsApp">
                             </div>
                             <button type="submit" class="w-full py-4 bg-sat-blue text-white font-semibold rounded-lg hover:bg-sat-cyan transition" data-i18n="form_submit">
                                 Dapatkan Analisis Gratis
@@ -1037,6 +1044,8 @@
                 form_phone: 'Nomor WhatsApp',
                 form_submit: 'Dapatkan Analisis Gratis',
                 form_note: 'Kami akan merespons dalam 24 jam',
+                form_map_hint: 'Gambar area perkebunan Anda di peta',
+                form_area: 'Luas area:',
 
                 // Footer
                 footer_tagline: 'Intelijen satelit untuk pengelolaan lahan berkelanjutan.',
@@ -1219,6 +1228,8 @@
                 form_phone: 'WhatsApp Number',
                 form_submit: 'Get Free Analysis',
                 form_note: 'We\'ll respond within 24 hours',
+                form_map_hint: 'Draw your plantation area on the map',
+                form_area: 'Area size:',
 
                 // Footer
                 footer_tagline: 'Satellite intelligence for sustainable land management.',
@@ -1293,6 +1304,130 @@
                 if (target) {
                     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
+            });
+        });
+
+        // Initialize boundary drawing map
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map centered on Indonesia (Riau province - palm oil region)
+            const drawMap = L.map('drawMap', {
+                center: [0.5, 101.5],
+                zoom: 8,
+                zoomControl: true
+            });
+
+            // Add satellite tile layer
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Esri'
+            }).addTo(drawMap);
+
+            // Initialize feature group for drawn items
+            const drawnItems = new L.FeatureGroup();
+            drawMap.addLayer(drawnItems);
+
+            // Initialize draw control
+            const drawControl = new L.Control.Draw({
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        shapeOptions: {
+                            color: '#0ea5e9',
+                            fillColor: '#0ea5e9',
+                            fillOpacity: 0.3,
+                            weight: 2
+                        }
+                    },
+                    rectangle: {
+                        shapeOptions: {
+                            color: '#0ea5e9',
+                            fillColor: '#0ea5e9',
+                            fillOpacity: 0.3,
+                            weight: 2
+                        }
+                    },
+                    circle: false,
+                    circlemarker: false,
+                    marker: false,
+                    polyline: false
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    remove: true
+                }
+            });
+            drawMap.addControl(drawControl);
+
+            // Calculate area in hectares
+            function calculateArea(layer) {
+                const latlngs = layer.getLatLngs()[0];
+                let area = 0;
+                const n = latlngs.length;
+
+                for (let i = 0; i < n; i++) {
+                    const j = (i + 1) % n;
+                    const xi = latlngs[i].lng * Math.PI / 180;
+                    const yi = latlngs[i].lat * Math.PI / 180;
+                    const xj = latlngs[j].lng * Math.PI / 180;
+                    const yj = latlngs[j].lat * Math.PI / 180;
+                    area += (xj - xi) * (2 + Math.sin(yi) + Math.sin(yj));
+                }
+
+                area = Math.abs(area * 6371000 * 6371000 / 2);
+                return area / 10000; // Convert to hectares
+            }
+
+            // Handle draw created event
+            drawMap.on(L.Draw.Event.CREATED, function(e) {
+                // Clear previous drawings
+                drawnItems.clearLayers();
+
+                const layer = e.layer;
+                drawnItems.addLayer(layer);
+
+                // Calculate and display area
+                const areaHa = calculateArea(layer);
+                document.getElementById('areaValue').textContent = areaHa.toFixed(1) + ' ha';
+                document.getElementById('areaDisplay').classList.remove('hidden');
+
+                // Save GeoJSON to hidden field
+                const geojson = layer.toGeoJSON();
+                document.getElementById('boundaryData').value = JSON.stringify(geojson);
+            });
+
+            // Handle draw deleted event
+            drawMap.on(L.Draw.Event.DELETED, function(e) {
+                if (drawnItems.getLayers().length === 0) {
+                    document.getElementById('areaDisplay').classList.add('hidden');
+                    document.getElementById('boundaryData').value = '';
+                }
+            });
+
+            // Handle form submission
+            document.getElementById('demoForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = {
+                    name: document.getElementById('formName').value,
+                    email: document.getElementById('formEmail').value,
+                    company: document.getElementById('formCompany').value,
+                    phone: document.getElementById('formPhone').value,
+                    boundary: document.getElementById('boundaryData').value
+                };
+
+                // For now, show success message
+                const lang = localStorage.getItem('satteli-lang') || 'id';
+                const successMsg = lang === 'id'
+                    ? 'Terima kasih! Kami akan menghubungi Anda dalam 24 jam.'
+                    : 'Thank you! We will contact you within 24 hours.';
+
+                alert(successMsg);
+                console.log('Form data:', formData);
+
+                // Reset form
+                this.reset();
+                drawnItems.clearLayers();
+                document.getElementById('areaDisplay').classList.add('hidden');
             });
         });
 
