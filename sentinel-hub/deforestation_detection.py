@@ -58,6 +58,35 @@ class DeforestationResult:
     coordinates: Optional[dict]
 
 
+@dataclass
+class PlantHealthResult:
+    """Result of plant health analysis."""
+    customer_id: str
+    boundary_id: str
+    boundary_name: str
+    analysis_date: str
+    boundary_area_ha: float
+    # Current NDVI metrics
+    mean_ndvi: Optional[float]
+    min_ndvi: Optional[float]
+    max_ndvi: Optional[float]
+    ndvi_std: Optional[float]
+    # Health classification
+    health_status: str  # healthy, moderate, stressed, critical, unknown
+    health_score: Optional[int]  # 0-100
+    # Comparison to baseline
+    baseline_ndvi: Optional[float]
+    ndvi_change_from_baseline: Optional[float]
+    # Stress zones
+    stressed_area_ha: Optional[float]
+    stressed_percentage: Optional[float]
+    # Recommendations
+    recommendations: list
+    # Alert
+    alert_triggered: bool
+    severity: Optional[str]
+
+
 # Evalscript for NDVI calculation
 NDVI_EVALSCRIPT = """
 //VERSION=3
@@ -486,6 +515,184 @@ def calculate_ndvi_trend(
         })
 
     return results
+
+
+def classify_plant_health(ndvi: float) -> Tuple[str, int]:
+    """
+    Classify plant health based on NDVI value.
+
+    For palm oil plantations:
+    - Healthy mature palms: NDVI 0.6 - 0.9
+    - Moderate/young palms: NDVI 0.4 - 0.6
+    - Stressed: NDVI 0.2 - 0.4
+    - Critical/dead: NDVI < 0.2
+
+    Returns:
+        Tuple of (health_status, health_score 0-100)
+    """
+    if ndvi is None:
+        return 'unknown', 0
+
+    if ndvi >= 0.7:
+        return 'healthy', int(min(100, 70 + (ndvi - 0.7) * 100))
+    elif ndvi >= 0.5:
+        return 'healthy', int(50 + (ndvi - 0.5) * 100)
+    elif ndvi >= 0.4:
+        return 'moderate', int(40 + (ndvi - 0.4) * 100)
+    elif ndvi >= 0.3:
+        return 'stressed', int(25 + (ndvi - 0.3) * 150)
+    elif ndvi >= 0.2:
+        return 'stressed', int(15 + (ndvi - 0.2) * 100)
+    else:
+        return 'critical', int(max(0, ndvi * 75))
+
+
+def get_health_recommendations(health_status: str, ndvi: float, ndvi_change: Optional[float]) -> list:
+    """Generate actionable recommendations based on plant health status."""
+
+    recommendations = []
+
+    if health_status == 'critical':
+        recommendations.append("URGENT: Immediate field inspection required")
+        recommendations.append("Check for disease outbreak (Ganoderma, Basal Stem Rot)")
+        recommendations.append("Assess irrigation/drainage issues")
+        recommendations.append("Consider soil nutrient analysis")
+
+    elif health_status == 'stressed':
+        recommendations.append("Schedule field inspection within 1 week")
+        recommendations.append("Check soil moisture levels")
+        recommendations.append("Review fertilization program")
+        if ndvi_change and ndvi_change < -0.1:
+            recommendations.append("Rapid decline detected - investigate pest/disease")
+
+    elif health_status == 'moderate':
+        recommendations.append("Monitor closely over next 2 weeks")
+        recommendations.append("Consider targeted fertilizer application")
+        if ndvi and ndvi < 0.45:
+            recommendations.append("Young palms may need additional nutrients")
+
+    elif health_status == 'healthy':
+        recommendations.append("Continue current management practices")
+        if ndvi and ndvi > 0.8:
+            recommendations.append("Excellent vegetation density")
+
+    return recommendations
+
+
+def analyze_plant_health(
+    boundary_geojson: dict,
+    customer_id: str,
+    boundary_id: str,
+    boundary_name: str = "Unknown",
+    baseline_ndvi: Optional[float] = None,
+    stress_threshold: float = 0.4
+) -> PlantHealthResult:
+    """
+    Analyze plant health for a boundary using NDVI metrics.
+
+    Args:
+        boundary_geojson: GeoJSON polygon of the area
+        customer_id: Customer identifier
+        boundary_id: Boundary identifier
+        boundary_name: Human-readable name
+        baseline_ndvi: Expected NDVI for healthy vegetation (optional)
+        stress_threshold: NDVI below this is considered stressed (default 0.4)
+
+    Returns:
+        PlantHealthResult with health analysis
+    """
+
+    bbox, boundary_area_ha = geojson_to_bbox(boundary_geojson)
+    today = datetime.now()
+
+    # Get current NDVI (last 14 days for cloud-free composite)
+    recent_start = (today - timedelta(days=14)).strftime('%Y-%m-%d')
+    recent_end = today.strftime('%Y-%m-%d')
+
+    print(f"  Analyzing plant health for: {boundary_name}")
+    print(f"  Period: {recent_start} to {recent_end}")
+
+    # Get NDVI statistics
+    stats = get_ndvi_stats(bbox, boundary_geojson, recent_start, recent_end, config)
+
+    mean_ndvi = stats.get('mean')
+    min_ndvi = stats.get('min')
+    max_ndvi = stats.get('max')
+
+    # Calculate standard deviation estimate from min/max
+    ndvi_std = None
+    if min_ndvi is not None and max_ndvi is not None:
+        ndvi_std = (max_ndvi - min_ndvi) / 4  # Rough estimate
+
+    # Classify health
+    health_status, health_score = classify_plant_health(mean_ndvi)
+
+    # Compare to baseline
+    ndvi_change_from_baseline = None
+    if baseline_ndvi and mean_ndvi:
+        ndvi_change_from_baseline = mean_ndvi - baseline_ndvi
+
+    # Estimate stressed area
+    stressed_area_ha = None
+    stressed_percentage = None
+    if min_ndvi is not None and mean_ndvi is not None:
+        # Rough estimate: assume normal distribution
+        if min_ndvi < stress_threshold:
+            # Estimate percentage below threshold
+            if ndvi_std and ndvi_std > 0:
+                z_score = (stress_threshold - mean_ndvi) / ndvi_std
+                # Simple approximation of CDF
+                if z_score > 0:
+                    stressed_percentage = min(100, max(0, 50 + z_score * 30))
+                else:
+                    stressed_percentage = max(0, 50 + z_score * 30)
+            else:
+                stressed_percentage = 10 if mean_ndvi > stress_threshold else 50
+            stressed_area_ha = boundary_area_ha * (stressed_percentage / 100)
+
+    # Generate recommendations
+    recommendations = get_health_recommendations(health_status, mean_ndvi, ndvi_change_from_baseline)
+
+    # Determine if alert should be triggered
+    alert_triggered = health_status in ['stressed', 'critical']
+    severity = None
+    if alert_triggered:
+        if health_status == 'critical':
+            severity = 'critical'
+        elif stressed_area_ha and stressed_area_ha > 10:
+            severity = 'high'
+        else:
+            severity = 'medium'
+
+    # Log results
+    if mean_ndvi:
+        print(f"  Mean NDVI: {mean_ndvi:.3f}")
+        print(f"  Health Status: {health_status.upper()} (Score: {health_score}/100)")
+        if alert_triggered:
+            print(f"  ⚠️ HEALTH ALERT: {severity.upper()}")
+    else:
+        print(f"  ⚠️ Could not retrieve NDVI data")
+
+    return PlantHealthResult(
+        customer_id=customer_id,
+        boundary_id=boundary_id,
+        boundary_name=boundary_name,
+        analysis_date=today.strftime('%Y-%m-%d'),
+        boundary_area_ha=boundary_area_ha,
+        mean_ndvi=mean_ndvi,
+        min_ndvi=min_ndvi,
+        max_ndvi=max_ndvi,
+        ndvi_std=ndvi_std,
+        health_status=health_status,
+        health_score=health_score,
+        baseline_ndvi=baseline_ndvi,
+        ndvi_change_from_baseline=ndvi_change_from_baseline,
+        stressed_area_ha=stressed_area_ha,
+        stressed_percentage=stressed_percentage,
+        recommendations=recommendations,
+        alert_triggered=alert_triggered,
+        severity=severity
+    )
 
 
 # ============================================================================
