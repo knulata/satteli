@@ -783,6 +783,17 @@
                         <h3 class="text-xl font-bold mb-2" data-i18n="form_title">Minta Analisis Gratis</h3>
                         <p class="text-sm text-gray-500 mb-4" data-i18n="form_map_hint">Gambar area perkebunan Anda di peta</p>
 
+                        <!-- Location search -->
+                        <div class="mb-3 flex gap-2">
+                            <div class="relative flex-1">
+                                <input type="text" id="locationSearch" class="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue text-sm" data-i18n-placeholder="form_location" placeholder="Tempel koordinat Google Maps atau cari lokasi...">
+                                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                            <button type="button" id="myLocationBtn" class="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition" title="Gunakan lokasi saya">
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </button>
+                        </div>
+
                         <!-- Map for drawing boundary -->
                         <div class="mb-4">
                             <div id="drawMap" class="w-full h-48 lg:h-56 rounded-lg border border-gray-200 z-0"></div>
@@ -1045,6 +1056,7 @@
                 form_submit: 'Dapatkan Analisis Gratis',
                 form_note: 'Kami akan merespons dalam 24 jam',
                 form_map_hint: 'Gambar area perkebunan Anda di peta',
+                form_location: 'Tempel koordinat Google Maps atau cari lokasi...',
                 form_area: 'Luas area:',
 
                 // Footer
@@ -1229,6 +1241,7 @@
                 form_submit: 'Get Free Analysis',
                 form_note: 'We\'ll respond within 24 hours',
                 form_map_hint: 'Draw your plantation area on the map',
+                form_location: 'Paste Google Maps coordinates or search location...',
                 form_area: 'Area size:',
 
                 // Footer
@@ -1400,6 +1413,104 @@
                 if (drawnItems.getLayers().length === 0) {
                     document.getElementById('areaDisplay').classList.add('hidden');
                     document.getElementById('boundaryData').value = '';
+                }
+            });
+
+            // Parse coordinates from various formats
+            function parseCoordinates(input) {
+                input = input.trim();
+
+                // Format: -1.234, 102.567 or 1.234, 102.567
+                let match = input.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+                if (match) {
+                    return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+                }
+
+                // Format: -1.234 102.567
+                match = input.match(/^(-?\d+\.?\d*)\s+(-?\d+\.?\d*)$/);
+                if (match) {
+                    return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+                }
+
+                // Google Maps URL format
+                match = input.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+                if (match) {
+                    return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+                }
+
+                // Google Maps place URL format
+                match = input.match(/place\/[^\/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+                if (match) {
+                    return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+                }
+
+                return null;
+            }
+
+            // Location search handler
+            const locationInput = document.getElementById('locationSearch');
+            let searchTimeout;
+
+            locationInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLocationSearch();
+                }
+            });
+
+            locationInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(handleLocationSearch, 800);
+            });
+
+            function handleLocationSearch() {
+                const input = locationInput.value.trim();
+                if (!input) return;
+
+                // Try parsing as coordinates first
+                const coords = parseCoordinates(input);
+                if (coords && coords.lat >= -90 && coords.lat <= 90 && coords.lng >= -180 && coords.lng <= 180) {
+                    drawMap.setView([coords.lat, coords.lng], 14);
+                    L.marker([coords.lat, coords.lng]).addTo(drawMap)
+                        .bindPopup('Lokasi Anda').openPopup();
+                    return;
+                }
+
+                // Otherwise, search using Nominatim
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            const result = data[0];
+                            drawMap.setView([parseFloat(result.lat), parseFloat(result.lon)], 14);
+                            L.marker([parseFloat(result.lat), parseFloat(result.lon)]).addTo(drawMap)
+                                .bindPopup(result.display_name.split(',')[0]).openPopup();
+                        }
+                    })
+                    .catch(err => console.error('Search error:', err));
+            }
+
+            // My location button
+            document.getElementById('myLocationBtn').addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    this.disabled = true;
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+                            drawMap.setView([lat, lng], 14);
+                            L.marker([lat, lng]).addTo(drawMap)
+                                .bindPopup('Lokasi Anda').openPopup();
+                            this.disabled = false;
+                        },
+                        (error) => {
+                            console.error('Geolocation error:', error);
+                            alert('Tidak dapat mengakses lokasi. Pastikan izin lokasi diaktifkan.');
+                            this.disabled = false;
+                        }
+                    );
+                } else {
+                    alert('Browser Anda tidak mendukung geolokasi.');
                 }
             });
 
