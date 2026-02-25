@@ -1,0 +1,19 @@
+# Satteli GEE Processing Requirements
+
+# Google Earth Engine
+earthengine-api>=0.1.390
+
+# Database
+supabase>=2.0.0
+
+# HTTP requests
+requests>=2.31.0
+
+# Email
+resend>=0.7.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Optional: For local testing
+geojson>=3.1.0
