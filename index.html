@@ -783,7 +783,7 @@
                         <h3 class="text-xl font-bold mb-2" data-i18n="form_title">Minta Analisis Gratis</h3>
                         <p class="text-sm text-gray-500 mb-4" data-i18n="form_map_hint">Gambar area perkebunan Anda di peta</p>
 
-                        <!-- Location search -->
+                        <!-- Location search + File upload -->
                         <div class="mb-3 flex gap-2">
                             <div class="relative flex-1">
                                 <input type="text" id="locationSearch" class="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:border-sat-blue text-sm" data-i18n-placeholder="form_location" placeholder="Tempel koordinat Google Maps atau cari lokasi...">
@@ -792,7 +792,13 @@
                             <button type="button" id="myLocationBtn" class="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition" title="Gunakan lokasi saya">
                                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </button>
+                            <label class="px-3 py-2.5 bg-sat-blue/10 hover:bg-sat-blue/20 text-sat-blue rounded-lg transition cursor-pointer flex items-center gap-2" title="Upload KML/GeoJSON">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                <span class="text-sm font-medium hidden sm:inline" data-i18n="form_upload">Upload</span>
+                                <input type="file" id="boundaryFile" accept=".kml,.kmz,.geojson,.json" class="hidden">
+                            </label>
                         </div>
+                        <p class="text-xs text-gray-400 mb-3 -mt-1" data-i18n="form_upload_hint">Punya file batas? Upload KML atau GeoJSON</p>
 
                         <!-- Map for drawing boundary -->
                         <div class="mb-4">
@@ -1057,6 +1063,8 @@
                 form_note: 'Kami akan merespons dalam 24 jam',
                 form_map_hint: 'Gambar area perkebunan Anda di peta',
                 form_location: 'Tempel koordinat Google Maps atau cari lokasi...',
+                form_upload: 'Upload',
+                form_upload_hint: 'Punya file batas? Upload KML atau GeoJSON',
                 form_area: 'Luas area:',
 
                 // Footer
@@ -1242,6 +1250,8 @@
                 form_note: 'We\'ll respond within 24 hours',
                 form_map_hint: 'Draw your plantation area on the map',
                 form_location: 'Paste Google Maps coordinates or search location...',
+                form_upload: 'Upload',
+                form_upload_hint: 'Have a boundary file? Upload KML or GeoJSON',
                 form_area: 'Area size:',
 
                 // Footer
@@ -1513,6 +1523,152 @@
                     alert('Browser Anda tidak mendukung geolokasi.');
                 }
             });
+
+            // Handle file upload (KML/GeoJSON)
+            document.getElementById('boundaryFile').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const content = event.target.result;
+                    let geojson;
+
+                    try {
+                        if (file.name.endsWith('.kml')) {
+                            // Parse KML
+                            geojson = parseKML(content);
+                        } else if (file.name.endsWith('.geojson') || file.name.endsWith('.json')) {
+                            // Parse GeoJSON directly
+                            geojson = JSON.parse(content);
+                        } else {
+                            throw new Error('Unsupported file format');
+                        }
+
+                        // Clear existing layers
+                        drawnItems.clearLayers();
+
+                        // Add to map
+                        const layer = L.geoJSON(geojson, {
+                            style: {
+                                color: '#0ea5e9',
+                                fillColor: '#0ea5e9',
+                                fillOpacity: 0.3,
+                                weight: 2
+                            }
+                        });
+
+                        layer.eachLayer(function(l) {
+                            drawnItems.addLayer(l);
+                        });
+
+                        // Fit map to bounds
+                        drawMap.fitBounds(layer.getBounds(), { padding: [20, 20] });
+
+                        // Calculate total area
+                        let totalArea = 0;
+                        drawnItems.eachLayer(function(l) {
+                            if (l.getLatLngs) {
+                                totalArea += calculateArea(l);
+                            }
+                        });
+
+                        document.getElementById('areaValue').textContent = totalArea.toFixed(1) + ' ha';
+                        document.getElementById('areaDisplay').classList.remove('hidden');
+
+                        // Save GeoJSON
+                        document.getElementById('boundaryData').value = JSON.stringify(geojson);
+
+                        const lang = localStorage.getItem('satteli-lang') || 'id';
+                        const successMsg = lang === 'id' ? 'File berhasil dimuat!' : 'File loaded successfully!';
+                        console.log(successMsg);
+
+                    } catch (err) {
+                        console.error('Parse error:', err);
+                        const lang = localStorage.getItem('satteli-lang') || 'id';
+                        const errorMsg = lang === 'id'
+                            ? 'Gagal membaca file. Pastikan format KML atau GeoJSON valid.'
+                            : 'Failed to read file. Please ensure valid KML or GeoJSON format.';
+                        alert(errorMsg);
+                    }
+                };
+
+                reader.readAsText(file);
+            });
+
+            // Simple KML parser
+            function parseKML(kmlString) {
+                const parser = new DOMParser();
+                const kml = parser.parseFromString(kmlString, 'text/xml');
+                const features = [];
+
+                // Parse Placemarks
+                const placemarks = kml.getElementsByTagName('Placemark');
+                for (let i = 0; i < placemarks.length; i++) {
+                    const placemark = placemarks[i];
+
+                    // Get coordinates from Polygon
+                    const polygons = placemark.getElementsByTagName('Polygon');
+                    for (let j = 0; j < polygons.length; j++) {
+                        const coordsText = polygons[j].getElementsByTagName('coordinates')[0]?.textContent;
+                        if (coordsText) {
+                            const coords = parseKMLCoordinates(coordsText);
+                            if (coords.length > 0) {
+                                features.push({
+                                    type: 'Feature',
+                                    properties: {},
+                                    geometry: {
+                                        type: 'Polygon',
+                                        coordinates: [coords]
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // Get coordinates from LinearRing (for simple polygons)
+                    if (polygons.length === 0) {
+                        const linearRings = placemark.getElementsByTagName('LinearRing');
+                        for (let j = 0; j < linearRings.length; j++) {
+                            const coordsText = linearRings[j].getElementsByTagName('coordinates')[0]?.textContent;
+                            if (coordsText) {
+                                const coords = parseKMLCoordinates(coordsText);
+                                if (coords.length > 0) {
+                                    features.push({
+                                        type: 'Feature',
+                                        properties: {},
+                                        geometry: {
+                                            type: 'Polygon',
+                                            coordinates: [coords]
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+            }
+
+            function parseKMLCoordinates(coordsText) {
+                const coords = [];
+                const pairs = coordsText.trim().split(/\s+/);
+                for (const pair of pairs) {
+                    const parts = pair.split(',');
+                    if (parts.length >= 2) {
+                        const lng = parseFloat(parts[0]);
+                        const lat = parseFloat(parts[1]);
+                        if (!isNaN(lng) && !isNaN(lat)) {
+                            coords.push([lng, lat]);
+                        }
+                    }
+                }
+                return coords;
+            }
 
             // Handle form submission
             document.getElementById('demoForm').addEventListener('submit', function(e) {
