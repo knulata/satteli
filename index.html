@@ -123,18 +123,20 @@
 
         .lang-toggle {
             cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 600;
             transition: all 0.2s;
+            color: #9ca3af;
         }
         .lang-toggle:hover {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
         }
         .lang-toggle.active {
-            background: rgba(14, 165, 233, 0.3);
-            color: #22d3ee;
+            background: #0ea5e9;
+            color: #fff;
         }
     </style>
 </head>
@@ -158,9 +160,15 @@
 
                 <div class="flex items-center gap-4">
                     <!-- Language Toggle -->
-                    <div class="flex items-center gap-1 border border-white/20 rounded-lg px-1 py-1">
-                        <span class="lang-toggle active" data-lang="id">ID</span>
-                        <span class="lang-toggle" data-lang="en">EN</span>
+                    <div class="flex items-center gap-1 bg-white/10 rounded-lg p-1">
+                        <span class="lang-toggle active" data-lang="id">
+                            <span class="hidden sm:inline">Bahasa</span>
+                            <span class="sm:hidden">ID</span>
+                        </span>
+                        <span class="lang-toggle" data-lang="en">
+                            <span class="hidden sm:inline">English</span>
+                            <span class="sm:hidden">EN</span>
+                        </span>
                     </div>
                     <a href="#contact" class="hidden sm:block text-gray-300 text-sm hover:text-white transition" data-i18n="nav_contact">Kontak</a>
                     <a href="#demo" class="px-5 py-2.5 bg-sat-blue text-white text-sm font-semibold rounded-lg hover:bg-sat-cyan transition" data-i18n="nav_demo">
