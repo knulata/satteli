@@ -31,8 +31,6 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         * { font-family: 'Inter', sans-serif; }
@@ -235,7 +233,7 @@
                 <!-- Satellite imagery preview -->
                 <div class="relative float">
                     <div class="aspect-square bg-gradient-to-br from-sat-navy to-sat-dark rounded-3xl overflow-hidden glow border border-white/10">
-                        <div id="satelliteMap" class="absolute inset-0"></div>
+                        <img src="https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=800&q=80" alt="Palm oil plantation aerial view" class="absolute inset-0 w-full h-full object-cover">
                         <div class="absolute inset-0" style="background: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(14,165,233,0.15) 40px, rgba(14,165,233,0.15) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(14,165,233,0.15) 40px, rgba(14,165,233,0.15) 41px);"></div>
                         <div class="absolute inset-0 bg-gradient-to-b from-transparent via-sat-cyan/5 to-transparent" style="animation: scan 3s linear infinite;"></div>
 
@@ -1297,27 +1295,6 @@
             });
         });
 
-        // Initialize satellite map
-        document.addEventListener('DOMContentLoaded', function() {
-            const map = L.map('satelliteMap', {
-                zoomControl: false,
-                attributionControl: false,
-                dragging: false,
-                scrollWheelZoom: false,
-                doubleClickZoom: false,
-                touchZoom: false
-            }).setView([1.5, 102.1], 13);
-
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                maxZoom: 19
-            }).addTo(map);
-
-            let lat = 1.5;
-            setInterval(() => {
-                lat += 0.0002;
-                map.panTo([lat, 102.1], { animate: true, duration: 1 });
-            }, 3000);
-        });
     </script>
 </body>
 </html>
