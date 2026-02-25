@@ -2,7 +2,9 @@
 
 ## Overview
 
-Satteli is a satellite monitoring platform for palm oil plantations and agriculture. It ingests free Sentinel-2 imagery, processes it through change detection algorithms, and delivers alerts via WhatsApp/email.
+Satteli is a satellite monitoring platform for palm oil plantations and agriculture. It uses **Sentinel Hub** (via Copernicus Data Space) to process Sentinel-2 imagery for change detection, delivering alerts via WhatsApp/email.
+
+**Key advantage**: Copernicus Data Space offers **10,000 free Processing Units/month** - enough for ~30-100 customers without any satellite data costs.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -18,12 +20,13 @@ Satteli is a satellite monitoring platform for palm oil plantations and agricult
                                     │
                                     ▼
                     ┌───────────────────────────────┐
-                    │    GOOGLE EARTH ENGINE        │
+                    │   SENTINEL HUB (Copernicus)   │
                     │  ┌─────────────────────────┐  │
-                    │  │ • Image compositing     │  │
+                    │  │ • Statistical API       │  │
                     │  │ • Cloud masking         │  │
                     │  │ • NDVI calculation      │  │
                     │  │ • Change detection      │  │
+                    │  │ • 10,000 PU/month FREE  │  │
                     │  └─────────────────────────┘  │
                     └───────────────┬───────────────┘
                                     │
@@ -351,17 +354,27 @@ def send_email_alert(email: str, alert: dict):
 
 | Component | Service | Monthly Cost |
 |-----------|---------|--------------|
-| Satellite Processing | Google Earth Engine | FREE (non-commercial limits) |
+| Satellite Processing | **Sentinel Hub (Copernicus)** | **FREE** (10,000 PU/month) |
 | Backend | Railway (Pro) | $20 |
 | Database | Supabase (Pro) | $25 |
 | Dashboard Hosting | Vercel (Pro) | $20 |
 | WhatsApp API | Fonnte | ~$10 |
 | Email | Resend | FREE (up to 3K/month) |
-| Map Tiles | Mapbox | FREE (up to 50K loads) |
-| File Storage | Supabase Storage | Included |
+| Map Tiles | Leaflet + Esri | FREE |
+| Fire Detection | NASA FIRMS | FREE |
 | **Total** | | **~$75/month** |
 
-At $75/month fixed cost + $0 marginal cost per hectare (Sentinel-2 is free), margins are excellent.
+### Processing Unit Economics
+
+| PU Tier | Monthly Cost | PUs | Customers Supported |
+|---------|-------------|-----|---------------------|
+| Copernicus Free | €0 | 10,000 | ~30-50 |
+| CREODIAS Exploration | €30 | 30,000 | ~100-150 |
+| CREODIAS Basic | €100 | 70,000 | ~250-350 |
+
+At $75/month fixed cost + €0 marginal cost for satellite data, margins are excellent:
+- **Break-even**: ~250 ha at $0.30/ha
+- **10,000 ha customer**: $3,000 revenue, ~$100 cost = **97% margin**
 
 ---
 
